@@ -374,6 +374,7 @@ function setupSocketEvents() {
         mySymbolEl.textContent = mySymbol;
         updateTurnUI();
         resetBoard();
+        document.getElementById('board').classList.remove('shake');
         readyScreen.classList.add('hidden');
         modalOverlay.classList.add('hidden');
         gameScreen.classList.remove('hidden');
