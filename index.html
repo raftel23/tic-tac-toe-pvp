@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Strike | Multiplayer</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS for TurnIndicator -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        corePlugins: {
+          preflight: false,
+        },
+        theme: {
+          extend: {
+            animation: {
+              'pulse-fast': 'pulse-fast 1.5s ease-in-out infinite',
+            },
+            keyframes: {
+              'pulse-fast': {
+                '0%, 100%': { opacity: '1' },
+                '50%': { opacity: '0.7' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+</head>
+<body>
+    <div id="auth-screen" class="page-container">
+        <h1>NEON <span class="cyan">TIC</span>-<span class="pink">TAC</span>-TOE</h1>
+        
+        <div id="login-form" class="input-card">
+            <h2>LOGIN</h2>
+            <input type="text" id="login-username" placeholder="Username" maxlength="8">
+            <input type="password" id="login-password" placeholder="Password">
+            <button id="login-btn">ENTER GAME</button>
+            <p class="toggle-auth">New player? <span id="show-register" class="cyan">Register here</span></p>
+        </div>
+
+        <div id="register-form" class="input-card hidden">
+            <h2>REGISTER</h2>
+            <input type="text" id="reg-display-name" placeholder="Display Name" maxlength="8">
+            <input type="text" id="reg-username" placeholder="Username" maxlength="8">
+            <input type="password" id="reg-password" placeholder="Password">
+            <button id="register-btn">CREATE ACCOUNT</button>
+            <p class="toggle-auth">Already have an account? <span id="show-login" class="cyan">Login here</span></p>
+        </div>
+        <p id="auth-error" class="error"></p>
+    </div>
+
+    <div id="dashboard" class="page-container hidden">
+        <h1>WELCOME, <span id="dash-display-name" class="cyan">PLAYER</span></h1>
+        
+        
+        <nav class="dash-nav">
+            <button id="find-match-btn">FIND MATCH</button>
+            <button id="view-mechanics-btn" class="pink">GAME MECHANICS</button>
+            <button id="view-profile-btn" class="secondary">PROFILE & STATS</button>
+            <button id="view-history-btn" class="secondary">GAME HISTORY</button>
+            <button id="view-leaderboard-btn" class="secondary">LEADERBOARDS</button>
+            <button id="logout-btn" class="danger">LOGOUT</button>
+        </nav>
+    </div>
+
+    <!-- Modals for History/Leaderboards -->
+    <div id="info-modal-overlay" class="overlay hidden">
+        <div class="info-modal">
+            <div class="modal-header">
+                <h2 id="info-modal-title">TITLE</h2>
+                <button id="close-info-modal">×</button>
+            </div>
+            <div id="info-modal-content"></div>
+        </div>
+    </div>
+
+    <div id="wait-screen" class="page-container hidden">
+        <div class="loader"></div>
+        <p id="wait-msg">Searching for an opponent...</p>
+        <div class="wait-actions">
+            <button id="cancel-search-btn" class="secondary">CANCEL SEARCH</button>
+            <button id="play-ai-btn" class="hidden pink">PLAY VS TRUMP BOT</button>
+        </div>
+    </div>
+
+    <!-- Match Found Flash -->
+    <div id="match-flash" class="overlay hidden">
+        <div class="flash-content">
+            <h2 class="cyan">MATCH FOUND!</h2>
+            <p>Your opponent is <span id="opponent-name" class="pink">...</span></p>
+        </div>
+    </div>
+
+    <!-- Ready Screen -->
+    <div id="ready-screen" class="page-container hidden">
+        <h2>PREPARE YOURSELF</h2>
+        <div class="ready-grid">
+            <div id="p1-ready-card" class="ready-card">
+                <span class="uname">YOU</span>
+                <span class="status">NOT READY</span>
+            </div>
+            <div class="vs">VS</div>
+            <div id="p2-ready-card" class="ready-card">
+                <span id="p2-ready-name" class="uname">OPPONENT</span>
+                <span class="status">NOT READY</span>
+            </div>
+        </div>
+        <div id="ready-timer" class="timer-countdown">Starts in: <span id="ready-timer-val">6</span>s</div>
+        <button id="ready-btn">READY UP</button>
+    </div>
+
+    <div id="game-screen" class="page-container hidden">
+
+        <!-- NEW: Pill-Shaped Turn Indicator -->
+        <div id="turn-indicator-container" class="w-full flex justify-center py-6">
+            <div id="turn-pill" class="relative w-80 h-14 rounded-full overflow-hidden bg-gray-800 border-2 border-white/10 transition-all duration-500 shadow-[0_0_25px_rgba(34,197,94,0.7)]">
+                
+                <!-- The Progress Bar (Background Layer) -->
+                <div id="turn-progress-bar" 
+                    class="absolute top-0 left-0 h-full bg-green-500 transition-all duration-1000 ease-linear animate-pulse-fast"
+                    style="width: 100%"></div>
+
+                <!-- The Text (Foreground Layer) -->
+                <div class="relative z-10 w-full h-full flex items-center justify-center">
+                    <span id="turn-display-text" class="text-white font-black tracking-widest text-lg drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+                        YOUR TURN <span id="turn-time-left" class="ml-2 font-mono">10s</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <header id="scoreboard">
+            <div class="player-info left">
+                <span id="p1-name">YOU</span>
+                <span id="p1-bp" class="bp-display">BP: 1000</span>
+                <span id="p1-role" class="role-badge cyan">X</span>
+            </div>
+            <div class="timer-container hidden">
+                <div id="timer-bar"></div>
+                <span id="timer-text">5s</span>
+            </div>
+            <div class="player-info right">
+                <span id="p2-name">OPPONENT</span>
+                <span id="p2-bp" class="bp-display">BP: 1000</span>
+                <span id="p2-role" class="role-badge pink">O</span>
+            </div>
+        </header>
+
+
+
+        <main id="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </main>
+
+        <div id="power-ups" class="hidden">
+            <div class="eraser-stack">
+                <button class="eraser-btn power-up-btn" data-id="1" title="Eraser 1">🪄</button>
+                <button class="eraser-btn power-up-btn" data-id="2" title="Eraser 2">🪄</button>
+                <button class="eraser-btn power-up-btn" data-id="3" title="Eraser 3">🪄</button>
+            </div>
+        </div>
+
+        <div id="role-indicator">
+            YOU ARE <span id="my-symbol">X</span>
+        </div>
+    </div>
+
+    <!-- End Game Modal -->
+    <div id="modal-overlay" class="hidden">
+        <div id="modal">
+            <h2 id="modal-result">YOU WIN!</h2>
+            <p id="modal-msg">Reason: Timeout</p>
+            <div class="modal-buttons">
+                <button id="rematch-btn">REMATCH</button>
+                <button id="decline-btn" class="secondary">DECLINE</button>
+            </div>
+            <div id="waiting-refusal" class="hidden">Waiting for opponent...</div>
+            <div id="refused-msg" class="hidden">Opponent refused. Redirecting...</div>
+            <div id="result-timer" class="timer-countdown result-timer">Returning to lobby in: <span id="result-timer-val">6</span>s</div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
