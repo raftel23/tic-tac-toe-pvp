@@ -396,8 +396,10 @@ function setupSocketEvents() {
     socket.on('game-over', ({ type, result, board, winningLine }) => {
         gameActive = false;
         stopTurnTimer();
-        renderBoardFromState(board);
-        if (winningLine) winningLine.forEach(index => cells[index].classList.add('winning-cell'));
+        if (winningLine) {
+            winningLine.forEach(index => cells[index].classList.add('winning-cell'));
+            document.getElementById('board').classList.add('shake');
+        }
 
         modalOverlay.classList.remove('hidden');
         rematchBtn.classList.remove('hidden');

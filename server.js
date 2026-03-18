@@ -38,6 +38,9 @@ app.post('/api/register', async (req, res) => {
     if (username.length > 8 || display_name.length > 8) {
         return res.status(400).json({ error: 'Names must be 8 characters or less' });
     }
+    if (password.length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
     if (/\s/.test(username)) {
         return res.status(400).json({ error: 'Username cannot contain spaces' });
     }
