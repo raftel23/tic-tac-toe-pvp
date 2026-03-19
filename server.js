@@ -17,6 +17,9 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const JWT_SECRET = process.env.JWT_SECRET || 'neon-tic-tac-toe-dev-secret';
+if (!process.env.JWT_SECRET) {
+    console.warn('WARNING: JWT_SECRET environment variable not set. Using default secret (unsafe).');
+}
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
@@ -149,7 +152,7 @@ io.use((socket, next) => {
 io.on('connection', (socket) => {
     console.log(`User connected: ${socket.user.username} (${socket.id})`);
     users.set(socket.id, socket.user.username);
-    
+
     // We already have username from token
     matchmake(socket, socket.user.username);
 
@@ -161,6 +164,9 @@ io.on('connection', (socket) => {
         const roomName = Array.from(socket.rooms).find(r => r.startsWith('room-'));
         if (!roomName) return;
 
+        const idx = parseInt(index);
+        if (isNaN(idx) || idx < 0 || idx > 8) return;
+
         const room = rooms.get(roomName);
         if (!room || !room.players.every(p => p.ready)) return;
 
@@ -169,7 +175,7 @@ io.on('connection', (socket) => {
         if (room.board[index] !== null) return;
 
         room.board[index] = player.symbol;
-        
+
         // --- Infinite Rule ---
         if (!room.marks) room.marks = { X: [], O: [] };
         room.marks[player.symbol].push(index);
@@ -206,9 +212,12 @@ io.on('connection', (socket) => {
         const room = rooms.get(roomName);
         if (!room) return;
 
+        const idx = parseInt(index);
+        if (isNaN(idx) || idx < 0 || idx > 8) return;
+
         const player = room.players.find(p => p.id === socket.id);
         if (player.symbol !== room.currentTurn) return;
-        
+
         if (!room.powerups) room.powerups = { X: { eraser: 3 }, O: { eraser: 3 } };
         if (room.powerups[player.symbol].eraser <= 0) return;
 
@@ -251,10 +260,10 @@ io.on('connection', (socket) => {
                 { id: 'ai-bot', userId: 0, username: 'TRUMP BOT', symbol: 'O', rematchRequest: false, ready: true }
             ];
 
-            rooms.set(roomName, { 
-                players, 
-                board: Array(9).fill(null), 
-                currentTurn: 'X', 
+            rooms.set(roomName, {
+                players,
+                board: Array(9).fill(null),
+                currentTurn: 'X',
                 timer: null,
                 marks: { X: [], O: [] },
                 powerups: { X: { eraser: 3 }, O: { eraser: 0 } }, // AI doesn't use eraser for simplicity
@@ -274,7 +283,7 @@ io.on('connection', (socket) => {
 
         const player = room.players.find(p => p.id === socket.id);
         player.rematchRequest = true;
-        
+
         io.to(roomName).emit('rematch-status', { id: socket.id, status: 'rematch' });
 
         // --- AI Auto-Rematch ---
@@ -342,7 +351,7 @@ io.on('connection', (socket) => {
 async function matchmake(socket, username) {
     if (waitingPlayer && waitingPlayer.id !== socket.id) {
         const waitingSocket = io.sockets.sockets.get(waitingPlayer.id);
-        
+
         if (!waitingSocket) {
             console.log(`Waiting player ${waitingPlayer.username} vanished. Updating search.`);
             waitingPlayer = { id: socket.id, userId: socket.user.id, username };
@@ -361,23 +370,23 @@ async function matchmake(socket, username) {
             players[1].symbol = 'X';
         }
 
-        rooms.set(roomName, { 
+        rooms.set(roomName, {
             players: await Promise.all(players.map(async p => {
                 const res = await db.query('SELECT elo FROM users WHERE id = $1', [p.userId]);
                 return { ...p, elo: res.rows[0].elo };
-            })), 
-            board: Array(9).fill(null), 
-            currentTurn: 'X', 
+            })),
+            board: Array(9).fill(null),
+            currentTurn: 'X',
             timer: null,
             marks: { X: [], O: [] },
             powerups: { X: { eraser: 3 }, O: { eraser: 3 } }
         });
-        
+
         waitingSocket.join(roomName);
         socket.join(roomName);
 
         io.to(roomName).emit('match-found', { players: players.map(p => ({ id: p.id, username: p.username })) });
-        
+
         // --- 6s Match Start Timer ---
         setTimeout(() => {
             const room = rooms.get(roomName);
@@ -428,19 +437,19 @@ async function saveAndEndGame(roomName, type, resultSymbol, winningLine = null) 
             }
 
             // Save competitive game record
-            await db.query('INSERT INTO games (player1_id, player2_id, winner_id, board_state) VALUES ($1, $2, $3, $4)', 
-              [p1.userId, p2.userId, winnerId, JSON.stringify(room.board)]);
+            await db.query('INSERT INTO games (player1_id, player2_id, winner_id, board_state) VALUES ($1, $2, $3, $4)',
+                [p1.userId, p2.userId, winnerId, JSON.stringify(room.board)]);
 
             // --- ELO Calculation ---
             const r1 = await db.query('SELECT elo FROM users WHERE id = $1', [p1.userId]);
             const r2 = await db.query('SELECT elo FROM users WHERE id = $1', [p2.userId]);
             let e1 = r1.rows[0].elo;
             let e2 = r2.rows[0].elo;
-            
+
             const K = 32;
             const ea = 1 / (1 + 10 ** ((e2 - e1) / 400));
             const eb = 1 / (1 + 10 ** ((e1 - e2) / 400));
-            
+
             let sa = 0.5, sb = 0.5;
             if (type !== 'draw') {
                 const winner = room.players.find(p => p.symbol === resultSymbol);
@@ -460,10 +469,10 @@ async function saveAndEndGame(roomName, type, resultSymbol, winningLine = null) 
     }
     // -----------------------------------------
 
-    io.to(roomName).emit('game-over', { 
-        type, 
-        result: resultSymbol, 
-        board: room.board, 
+    io.to(roomName).emit('game-over', {
+        type,
+        result: resultSymbol,
+        board: room.board,
         winningLine,
         players: await Promise.all(room.players.map(async p => {
             const res = await db.query('SELECT elo FROM users WHERE id = $1', [p.userId || 0]); // 0 for AI
@@ -477,7 +486,7 @@ async function saveAndEndGame(roomName, type, resultSymbol, winningLine = null) 
             io.to(roomName).emit('return-to-dashboard');
             rooms.delete(roomName);
         }
-    }, 7000); 
+    }, 7000);
 }
 
 
@@ -531,7 +540,7 @@ function makeAIMove(roomName) {
     if (!room || room.currentTurn !== 'O' || !room.isAI) return;
 
     const bestMove = getBestMove(room.board, room.marks.O);
-    
+
     // Simulate make-move logic
     room.board[bestMove] = 'O';
     room.marks.O.push(bestMove);
@@ -563,7 +572,7 @@ function getBestMove(board, aiMarks) {
             let removedMark = null;
             let tempBoard = [...board];
             let tempAiMarks = [...aiMarks];
-            
+
             tempBoard[i] = 'O';
             tempAiMarks.push(i);
             if (tempAiMarks.length > 3) {
@@ -597,7 +606,7 @@ function minimax(board, depth, isMaximizing, aiMarks, playerMarks) {
                 tempBoard[i] = 'O';
                 tempAiMarks.push(i);
                 if (tempAiMarks.length > 3) tempBoard[tempAiMarks.shift()] = null;
-                
+
                 let score = minimax(tempBoard, depth + 1, false, tempAiMarks, playerMarks);
                 bestScore = Math.max(score, bestScore);
             }

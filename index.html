@@ -6,33 +6,16 @@
     <title>Neon Strike | Multiplayer</title>
 
     <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00f2ff">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&display=swap" rel="stylesheet">
-    <!-- Tailwind CSS for TurnIndicator -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        corePlugins: {
-          preflight: false,
-        },
-        theme: {
-          extend: {
-            animation: {
-              'pulse-fast': 'pulse-fast 1.5s ease-in-out infinite',
-            },
-            keyframes: {
-              'pulse-fast': {
-                '0%, 100%': { opacity: '1' },
-                '50%': { opacity: '0.7' },
-              }
-            }
-          }
-        }
-      }
-    </script>
 </head>
 <body>
+    <!-- Sound Toggle -->
+    <button id="sound-toggle" class="sound-control" title="Toggle Sound">
+        <span class="icon">🔊</span>
+    </button>
+
     <div id="auth-screen" class="page-container">
         <h1>NEON <span class="cyan">TIC</span>-<span class="pink">TAC</span>-TOE</h1>
         
@@ -49,6 +32,7 @@
             <input type="text" id="reg-display-name" placeholder="Display Name" maxlength="8">
             <input type="text" id="reg-username" placeholder="Username" maxlength="8">
             <input type="password" id="reg-password" placeholder="Password">
+            <input type="password" id="reg-password-confirm" placeholder="Confirm Password">
             <button id="register-btn">CREATE ACCOUNT</button>
             <p class="toggle-auth">Already have an account? <span id="show-login" class="cyan">Login here</span></p>
         </div>
@@ -117,19 +101,16 @@
 
     <div id="game-screen" class="page-container hidden">
 
-        <!-- NEW: Pill-Shaped Turn Indicator -->
-        <div id="turn-indicator-container" class="w-full flex justify-center py-6">
-            <div id="turn-pill" class="relative w-80 h-14 rounded-full overflow-hidden bg-gray-800 border-2 border-white/10 transition-all duration-500 shadow-[0_0_25px_rgba(34,197,94,0.7)]">
-                
-                <!-- The Progress Bar (Background Layer) -->
-                <div id="turn-progress-bar" 
-                    class="absolute top-0 left-0 h-full bg-green-500 transition-all duration-1000 ease-linear animate-pulse-fast"
-                    style="width: 100%"></div>
+        <!-- Turn Indicator -->
+        <div id="turn-indicator-container">
+            <div id="turn-pill">
+                <!-- Progress Bar -->
+                <div id="turn-progress-bar"></div>
 
-                <!-- The Text (Foreground Layer) -->
-                <div class="relative z-10 w-full h-full flex items-center justify-center">
-                    <span id="turn-display-text" class="text-white font-black tracking-widest text-lg drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
-                        YOUR TURN <span id="turn-time-left" class="ml-2 font-mono">10s</span>
+                <!-- Turn Text -->
+                <div class="turn-content">
+                    <span id="turn-display-text" class="turn-text">
+                        YOUR TURN <span id="turn-time-left">10s</span>
                     </span>
                 </div>
             </div>
@@ -195,6 +176,6 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js"></script>
+    <script src="script.js?v=2"></script>
 </body>
 </html>

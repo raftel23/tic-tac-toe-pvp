@@ -13,6 +13,111 @@ let timerInterval = null;
 let myId = null;
 let countdownInterval = null;
 
+// --- Audio Controller (Native Synthesizer) ---
+class AudioController {
+    constructor() {
+        this.muted = localStorage.getItem('ttt_muted') === 'true';
+        this.ctx = null;
+        this.updateToggleButton();
+    }
+
+    init() {
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    }
+
+    play(name) {
+        if (this.muted) return;
+        this.init();
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        const now = this.ctx.currentTime;
+
+        switch (name) {
+            case 'move':
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+                break;
+            case 'match':
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.3);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+                break;
+            case 'win':
+                osc.type = 'triangle';
+                [0, 0.1, 0.2].forEach((t, i) => {
+                    const o = this.ctx.createOscillator();
+                    const g = this.ctx.createGain();
+                    o.type = 'triangle';
+                    o.frequency.setValueAtTime(440 + i * 110, now + t);
+                    g.gain.setValueAtTime(0.2, now + t);
+                    g.gain.exponentialRampToValueAtTime(0.01, now + t + 0.4);
+                    o.connect(g);
+                    g.connect(this.ctx.destination);
+                    o.start(now + t);
+                    o.stop(now + t + 0.4);
+                });
+                break;
+            case 'lose':
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.linearRampToValueAtTime(50, now + 0.5);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                osc.start(now);
+                osc.stop(now + 0.5);
+                break;
+            case 'draw':
+            case 'click':
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, now);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+                break;
+        }
+    }
+
+    toggleMute() {
+        this.muted = !this.muted;
+        localStorage.setItem('ttt_muted', this.muted);
+        this.updateToggleButton();
+        if (!this.muted) this.play('click');
+    }
+
+    updateToggleButton() {
+        const btn = document.getElementById('sound-toggle');
+        if (!btn) return;
+        const icon = btn.querySelector('.icon');
+        if (this.muted) {
+            btn.classList.add('muted');
+            icon.textContent = '⭰';
+        } else {
+            btn.classList.remove('muted');
+            icon.textContent = '🔊';
+        }
+    }
+}
+
+const audio = new AudioController();
+document.getElementById('sound-toggle').onclick = () => audio.toggleMute();
+
 let userToken = localStorage.getItem('ttt_token');
 let userData = JSON.parse(localStorage.getItem('ttt_user') || 'null');
 
@@ -136,7 +241,13 @@ function initAuth() {
         const username = document.getElementById('reg-username').value;
         const display_name = document.getElementById('reg-display-name').value;
         const password = document.getElementById('reg-password').value;
+        const passwordConfirm = document.getElementById('reg-password-confirm').value;
+        if (password !== passwordConfirm) {
+            authError.textContent = 'Passwords do not match';
+            return;
+        }
         try {
+            audio.play('click');
             await apiCall('/api/register', 'POST', { username, display_name, password });
             alert('Registration successful! Please login.');
             document.getElementById('show-login').click();
@@ -147,6 +258,7 @@ function initAuth() {
         const username = document.getElementById('login-username').value;
         const password = document.getElementById('login-password').value;
         try {
+            audio.play('click');
             const data = await apiCall('/api/login', 'POST', { username, password });
             userToken = data.token;
             userData = data.user;
@@ -173,6 +285,7 @@ initAuth();
 
 // --- Dashboard Actions ---
 document.getElementById('find-match-btn').onclick = () => {
+    audio.play('click');
     dashboard.classList.add('hidden');
     connectSocket();
 };
@@ -257,7 +370,10 @@ function showInfoModal(title, content) {
     infoModalOverlay.classList.remove('hidden');
 }
 
-document.getElementById('close-info-modal').onclick = () => infoModalOverlay.classList.add('hidden');
+document.getElementById('close-info-modal').onclick = () => {
+    audio.play('click');
+    infoModalOverlay.classList.add('hidden');
+};
 
 // --- Socket Logic ---
 function connectSocket() {
@@ -275,6 +391,7 @@ function connectSocket() {
 }
 
 readyBtn.addEventListener('click', () => {
+    audio.play('click');
     socket.emit('player-ready');
     readyBtn.classList.add('hidden');
     p1ReadyCard.classList.add('is-ready');
@@ -283,6 +400,7 @@ readyBtn.addEventListener('click', () => {
 
 eraserBtns.forEach(btn => {
     btn.addEventListener('click', () => {
+        audio.play('click');
         if (currentTurn !== mySymbol) return;
         eraserBtns.forEach(b => b !== btn && b.classList.remove('active'));
         btn.classList.toggle('active');
@@ -329,6 +447,7 @@ function setupSocketEvents() {
         waitScreen.classList.add('hidden');
         opponentNameEl.textContent = opponent.username;
         matchFlash.classList.remove('hidden');
+        audio.play('match');
 
         setTimeout(() => {
             matchFlash.classList.add('hidden');
@@ -380,23 +499,35 @@ function setupSocketEvents() {
         gameScreen.classList.remove('hidden');
         powerUpsDiv.classList.remove('hidden');
         eraserBtns.forEach(btn => { btn.disabled = false; btn.classList.remove('used', 'active'); });
+        audio.play('click');
     });
 
     socket.on('game-state', ({ board, currentTurn: nextTurn, marks }) => {
+        // Only update if game is active or it's the final sync
+        let boardChanged = false;
+        
         currentTurn = nextTurn;
         board.forEach((symbol, i) => {
             const cell = cells[i];
+            if (cell.textContent !== symbol) boardChanged = true;
             cell.textContent = symbol;
             cell.setAttribute('data-symbol', symbol);
             cell.classList.remove('fading');
             if (marks && marks[symbol]?.length === 3 && marks[symbol][0] == i) cell.classList.add('fading');
         });
-        updateTurnUI();
+
+        // Play move sound ONLY if the board actually changed
+        if (boardChanged) audio.play('move');
+
+        // Only update turn UI if game is still active
+        if (gameActive) updateTurnUI();
     });
 
     socket.on('game-over', ({ type, result, board, winningLine }) => {
+        if (!gameActive) return; // Prevent double trigger
         gameActive = false;
         stopTurnTimer();
+
         if (winningLine) {
             winningLine.forEach(index => cells[index].classList.add('winning-cell'));
             document.getElementById('board').classList.add('shake');
@@ -408,9 +539,11 @@ function setupSocketEvents() {
 
         if (type === 'draw') {
             modalResult.textContent = "IT'S A DRAW!";
+            audio.play('draw');
         } else {
             const isMe = result === mySymbol;
             modalResult.textContent = isMe ? "YOU WIN!" : "YOU LOSE!";
+            audio.play(isMe ? 'win' : 'lose');
         }
         startCountdown(6, resultTimerVal, () => { });
     });
@@ -446,6 +579,15 @@ function renderBoardFromState(board) {
     });
 }
 
+// --- Service Worker Registration ---
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+            .then(reg => console.log('Service Worker registered:', reg.scope))
+            .catch(err => console.log('Service Worker registration failed:', err));
+    });
+}
+
 // --- Turn Indicator Logic ---
 const MAX_TURN_TIME = 10;
 let turnTimeLeft = MAX_TURN_TIME;
@@ -455,22 +597,22 @@ const turnProgressBar = document.getElementById('turn-progress-bar');
 const turnDisplayText = document.getElementById('turn-display-text');
 
 function startTurnTimer(isMyTurn) {
+    if (!gameActive) return; // Guard: Don't start timer if game is over
     clearInterval(turnTimerInterval);
     turnTimeLeft = MAX_TURN_TIME;
 
-    // Fast Reset: Instantly jump to 100%
-    turnProgressBar.classList.remove('transition-all', 'duration-1000', 'ease-linear');
+    // Fast Reset: Instantly jump to 100% without transition
+    turnProgressBar.style.transition = 'none';
     turnProgressBar.style.width = '100%';
     void turnProgressBar.offsetWidth; // Force reflow
+    turnProgressBar.style.transition = 'width 1s linear';
 
     if (isMyTurn) {
-        turnPill.className = "relative w-80 h-14 rounded-full overflow-hidden bg-gray-800 border-2 border-white/10 transition-all duration-500 shadow-[0_0_25px_rgba(34,197,94,0.7)]";
-        turnProgressBar.className = "absolute top-0 left-0 h-full bg-green-500 transition-all duration-1000 ease-linear animate-pulse-fast";
-        turnDisplayText.innerHTML = `YOUR TURN <span id="turn-time-left" class="ml-2 font-mono">${MAX_TURN_TIME}s</span>`;
+        turnPill.className = "my-turn";
+        turnDisplayText.innerHTML = `YOUR TURN <span id="turn-time-left">${MAX_TURN_TIME}s</span>`;
     } else {
-        turnPill.className = "relative w-80 h-14 rounded-full overflow-hidden bg-gray-800 border-2 border-white/10 transition-all duration-500 shadow-[0_0_25px_rgba(249,115,22,0.7)]";
-        turnProgressBar.className = "absolute top-0 left-0 h-full bg-orange-500 transition-all duration-1000 ease-linear animate-pulse-fast";
-        turnDisplayText.innerHTML = `OPPONENT'S TURN <span id="turn-time-left" class="ml-2 font-mono">${MAX_TURN_TIME}s</span>`;
+        turnPill.className = "opponent-turn";
+        turnDisplayText.innerHTML = `OPPONENT'S TURN <span id="turn-time-left">${MAX_TURN_TIME}s</span>`;
     }
 
     turnTimerInterval = setInterval(() => {
