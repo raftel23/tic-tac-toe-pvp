@@ -6,6 +6,12 @@
 
 let socket;
 let myUsername = '';
+
+// --- DEPLOYMENT CONFIGURATION ---
+// If you are deploying to Render, put your Render URL here (e.g., 'https://your-app.onrender.com')
+// Leave it as an empty string for local development or if using same-host hosting.
+const BACKEND_URL = ''; 
+// --------------------------------
 let mySymbol = null;
 let currentTurn = 'X';
 let gameActive = false;
@@ -380,9 +386,9 @@ function connectSocket() {
     waitScreen.classList.remove('hidden');
     
     // Dynamic server URL for deployment
-    const SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    const SERVER_URL = BACKEND_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? '' // Same host in local dev
-        : 'https://your-backend-url.onrender.com'; // Point to Render in production
+        : ''); // Default to same host if not specified
     
     socket = io(SERVER_URL, { 
         auth: { token: userToken }, 
