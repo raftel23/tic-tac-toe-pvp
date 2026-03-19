@@ -397,7 +397,9 @@ function connectSocket() {
     });
 
     socket.on('connect', () => { myId = socket.id; });
-    socket.on('connect_error', (err) => { window.location.reload(); });
+    socket.on('connect_error', (err) => { 
+        console.error('Socket Connection Error:', err);
+    });
 
     matchmakingTimeout = setTimeout(() => {
         if (!gameActive && !waitScreen.classList.contains('hidden')) playAiBtn.classList.remove('hidden');
