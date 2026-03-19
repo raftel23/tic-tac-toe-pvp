@@ -23,8 +23,10 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    min-height: 100vh;
+    min-height: 100dvh; /* Modern mobile viewport height */
     overflow: hidden;
+    touch-action: manipulation; /* Faster taps on mobile */
 }
 
 .page-container {
@@ -152,7 +154,8 @@ button.danger {
     border: 1px solid var(--border);
     width: 90%;
     max-width: 500px;
-    max-height: 80vh;
+    max-height: 85vh;
+    max-height: 85dvh;
     overflow-y: auto;
     box-shadow: 0 20px 40px rgba(0,0,0,0.5);
 }
@@ -528,9 +531,12 @@ button.danger {
 
 /* Mobile Adjustments */
 @media (max-width: 600px) {
-    .container { padding: 10px; }
-    h1 { font-size: 1.5rem; }
-    .cell { font-size: 2.5rem; }
+    .page-container { padding: 15px; }
+    h1 { font-size: 1.5rem; margin-bottom: 1.2rem; }
+    .cell { font-size: 2.5rem; width: 85px; height: 85px; }
+    #board { grid-template-columns: repeat(3, 85px); grid-template-rows: repeat(3, 85px); grid-gap: 10px; }
+    .turn-text { font-size: 1rem; }
+    #turn-pill { width: 90%; height: 50px; }
 }
 
 /* BP Display in Scoreboard */
