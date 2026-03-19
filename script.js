@@ -13,6 +13,7 @@ let myUsername = '';
 // const BACKEND_URL = ''; 
 
 const BACKEND_URL = 'https://neon-strike-api.onrender.com';
+const SERVER_URL = BACKEND_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '' : '');
 
 // --------------------------------
 let mySymbol = null;
@@ -214,7 +215,8 @@ async function apiCall(endpoint, method = 'GET', body = null) {
     if (userToken) options.headers['Authorization'] = `Bearer ${userToken}`;
     if (body) options.body = JSON.stringify(body);
 
-    const res = await fetch(endpoint, options);
+    const fullUrl = endpoint.startsWith('http') ? endpoint : `${SERVER_URL}${endpoint}`;
+    const res = await fetch(fullUrl, options);
     const contentType = res.headers.get('content-type');
     let data;
     if (contentType && contentType.includes('application/json')) {
@@ -387,11 +389,6 @@ document.getElementById('close-info-modal').onclick = () => {
 // --- Socket Logic ---
 function connectSocket() {
     waitScreen.classList.remove('hidden');
-
-    // Dynamic server URL for deployment
-    const SERVER_URL = BACKEND_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? '' // Same host in local dev
-        : ''); // Default to same host if not specified
 
     socket = io(SERVER_URL, {
         auth: { token: userToken },
