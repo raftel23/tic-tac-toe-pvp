@@ -378,7 +378,17 @@ document.getElementById('close-info-modal').onclick = () => {
 // --- Socket Logic ---
 function connectSocket() {
     waitScreen.classList.remove('hidden');
-    socket = io({ auth: { token: userToken }, transports: ['polling', 'websocket'] });
+    
+    // Dynamic server URL for deployment
+    const SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? '' // Same host in local dev
+        : 'https://your-backend-url.onrender.com'; // Point to Render in production
+    
+    socket = io(SERVER_URL, { 
+        auth: { token: userToken }, 
+        transports: ['polling', 'websocket'],
+        reconnectionAttempts: 5
+    });
 
     socket.on('connect', () => { myId = socket.id; });
     socket.on('connect_error', (err) => { window.location.reload(); });

@@ -14,7 +14,12 @@ const db = require('./database');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+    cors: {
+        origin: process.env.FRONTEND_URL || "*", // Allow all in dev, restrict in prod
+        methods: ["GET", "POST"]
+    }
+});
 
 const JWT_SECRET = process.env.JWT_SECRET || 'neon-tic-tac-toe-dev-secret';
 if (!process.env.JWT_SECRET) {
