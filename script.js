@@ -10,7 +10,10 @@ let myUsername = '';
 // --- DEPLOYMENT CONFIGURATION ---
 // If you are deploying to Render, put your Render URL here (e.g., 'https://your-app.onrender.com')
 // Leave it as an empty string for local development or if using same-host hosting.
-const BACKEND_URL = ''; 
+// const BACKEND_URL = ''; 
+
+const BACKEND_URL = 'https://neon-strike-api.onrender.com';
+
 // --------------------------------
 let mySymbol = null;
 let currentTurn = 'X';
@@ -351,10 +354,10 @@ document.getElementById('view-leaderboard-btn').onclick = async () => {
                 <thead><tr><th>RANK</th><th>PLAYER</th><th>BP</th><th>WINS</th></tr></thead>
                 <tbody>
                     ${players.map((p, i) => {
-                        const rankClass = i === 0 ? 'rank-gold' : (i === 1 ? 'rank-silver' : (i === 2 ? 'rank-bronze' : ''));
-                        const rankIcon = i === 0 ? '👑 ' : (i === 1 ? '🥈 ' : (i === 2 ? '🥉 ' : ''));
-                        return `<tr><td>${i + 1}</td><td class="${rankClass}">${rankIcon}${p.display_name}</td><td class="pink">${p.elo || 1000}</td><td class="cyan">${p.wins}</td></tr>`;
-                    }).join('')}
+            const rankClass = i === 0 ? 'rank-gold' : (i === 1 ? 'rank-silver' : (i === 2 ? 'rank-bronze' : ''));
+            const rankIcon = i === 0 ? '👑 ' : (i === 1 ? '🥈 ' : (i === 2 ? '🥉 ' : ''));
+            return `<tr><td>${i + 1}</td><td class="${rankClass}">${rankIcon}${p.display_name}</td><td class="pink">${p.elo || 1000}</td><td class="cyan">${p.wins}</td></tr>`;
+        }).join('')}
                 </tbody>
             </table>`;
         showInfoModal('LEADERBOARDS', html || '<p>No rankings yet.</p>');
@@ -384,14 +387,14 @@ document.getElementById('close-info-modal').onclick = () => {
 // --- Socket Logic ---
 function connectSocket() {
     waitScreen.classList.remove('hidden');
-    
+
     // Dynamic server URL for deployment
     const SERVER_URL = BACKEND_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? '' // Same host in local dev
         : ''); // Default to same host if not specified
-    
-    socket = io(SERVER_URL, { 
-        auth: { token: userToken }, 
+
+    socket = io(SERVER_URL, {
+        auth: { token: userToken },
         transports: ['polling', 'websocket'],
         reconnectionAttempts: 5
     });
@@ -521,7 +524,7 @@ function setupSocketEvents() {
     socket.on('game-state', ({ board, currentTurn: nextTurn, marks }) => {
         // Only update if game is active or it's the final sync
         let boardChanged = false;
-        
+
         currentTurn = nextTurn;
         board.forEach((symbol, i) => {
             const cell = cells[i];
@@ -636,9 +639,9 @@ function startTurnTimer(isMyTurn) {
         const curTimeDisplay = document.getElementById('turn-time-left');
         if (curTimeDisplay) curTimeDisplay.textContent = `${Math.max(0, turnTimeLeft)}s`;
         turnProgressBar.style.width = `${(turnTimeLeft / MAX_TURN_TIME) * 100}%`;
-        
-        if (turnTimeLeft <= 0) { 
-            stopTurnTimer(); 
+
+        if (turnTimeLeft <= 0) {
+            stopTurnTimer();
             if (isMyTurn) socket.emit('make-move', { index: -1, timeout: true });
         }
     }, 1000);
